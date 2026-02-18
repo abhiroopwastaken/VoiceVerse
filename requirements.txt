@@ -6,5 +6,5 @@ pydub
 PyMuPDF
 python-docx
 chardet
-huggingface-hub
+huggingface-hub>=0.19.3,<0.25.0
 numpy
