@@ -1,0 +1,10 @@
+gradio==3.50.2
+sentence-transformers
+faiss-cpu
+edge-tts
+pydub
+PyMuPDF
+python-docx
+chardet
+huggingface-hub
+numpy
