@@ -15,25 +15,37 @@ from gradio.blocks import Blocks
 import gradio_client.utils as client_utils # Changed from gradio_client to gradio_client.utils
 import huggingface_hub
 
-# --- BETTER SAFETY PATCH: Fixes the Gradio Client utility bug ---
-# This fixes the 'bool is not iterable' TypeError in gradio_client.utils.get_type
-# by properly handling boolean schemas in the OpenAPI documentation generator.
+# --- DEEP SAFETY PATCH: Fixes the Gradio Client recursive schema bug ---
+# This fixes the 'bool is not iterable' TypeError in gradio_client.utils
+# by patching both the helper and the main recursive function.
 if hasattr(client_utils, "get_type"):
     original_get_type = client_utils.get_type
     def patched_get_type(schema):
-        if isinstance(schema, bool):
+        if not isinstance(schema, dict):
             return "Any"
         return original_get_type(schema)
     client_utils.get_type = patched_get_type
 
-# Fallback: Still patch get_api_info but return the original if it works now
+if hasattr(client_utils, "_json_schema_to_python_type"):
+    original_recursive = client_utils._json_schema_to_python_type
+    def patched_recursive(schema, defs):
+        if not isinstance(schema, dict):
+            return "Any"
+        try:
+            return original_recursive(schema, defs)
+        except Exception:
+            return "Any"
+    client_utils._json_schema_to_python_type = patched_recursive
+
+# Keep the Blocks.get_api_info patch as a final safety net
 original_get_api_info = Blocks.get_api_info
 def patched_get_api_info(self):
     try:
         return original_get_api_info(self)
     except Exception as e:
-        print(f"DEBUG: Still crashing after patch, returning empty info: {e}")
-        return {}
+        print(f"DEBUG: API Schema builder still failed: {e}")
+        # Return a minimalist valid schema instead of {}
+        return {"named_endpoints": {}, "unnamed_endpoints": {}}
 Blocks.get_api_info = patched_get_api_info
 # -----------------------------------------------------------
 
@@ -710,8 +722,4 @@ def create_app():
 # ─── Launch ─────────────────────────────────────────────────────
 
 app = create_app()
-app.launch(
-    server_name="0.0.0.0",
-    server_port=7860,
-    show_api=False
-)
+app.launch()
