@@ -120,7 +120,7 @@ QUALITY RULES:
 - The story MUST be drawn from the actual content of the source, not invented narrative
 - Weave in specific researchers, experiments, discoveries, or examples from the source
 - Make it compelling and vivid using the real details present in the material
-- Total: 12-17 paragraphs
+- Total: 6-9 paragraphs
 
 SOURCE MATERIAL (use ONLY this):
 {context}
@@ -143,11 +143,15 @@ def get_template(style: str) -> str:
 
 
 def build_prompt(context: str, style: str, custom_focus: str = "") -> str:
-    """Build the full prompt for script generation."""
+    """Build the full prompt for script generation safely."""
     template = get_template(style)
     
     focus_instruction = ""
     if custom_focus:
         focus_instruction = f"SPECIAL FOCUS: Emphasise content related to: {custom_focus}"
     
-    return template.format(context=context, custom_focus=focus_instruction)
+    # Use .replace instead of .format to avoid KeyError/ValueError if context has braces {}
+    prompt = template.replace("{context}", context)
+    prompt = prompt.replace("{custom_focus}", focus_instruction)
+    
+    return prompt

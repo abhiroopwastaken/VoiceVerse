@@ -13,7 +13,6 @@ from typing import List, Tuple, Optional
 from config import VOICE_MAP, DEFAULT_VOICES, SPEECH_RATE, SPEECH_PITCH
 from modules.audio_utils import merge_audio_segments
 
-
 # Speaker label → voice name mapping per style
 SPEAKER_VOICE_MAPPING = {
     "HOST_A":      "Host A (Male)",
@@ -130,8 +129,15 @@ async def _generate_all_segments(
             output_paths.append(out)
             tasks.append(_synthesize_segment(text, voice_id, out, rate, pitch))
 
-    print(f"[VoiceGen] Generating {len(tasks)} tasks in parallel...")
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+    print(f"[VoiceGen] Generating {len(tasks)} tasks (concurrency=5)...")
+    
+    # Process tasks in batches of 5 to prevent memory OOM or rate limits
+    results = []
+    concurrency_limit = 5
+    for i in range(0, len(tasks), concurrency_limit):
+        batch = tasks[i : i + concurrency_limit]
+        batch_results = await asyncio.gather(*batch, return_exceptions=True)
+        results.extend(batch_results)
 
     valid_paths = []
     for path, result in zip(output_paths, results):

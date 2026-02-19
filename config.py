@@ -16,9 +16,9 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 # Groq Model — handles both script generation and summarization
 # Using llama-3.1-8b-instant: fast, free, high quality
 GROQ_MODEL_ID = "llama-3.1-8b-instant"
-SCRIPT_MAX_TOKENS = 3000
+SCRIPT_MAX_TOKENS = 4096
 SCRIPT_TEMPERATURE = 0.5
-SUMMARIZATION_MAX_TOKENS = 512
+SUMMARIZATION_MAX_TOKENS = 1024
 SUMMARIZATION_TEMPERATURE = 0.3
 
 # ─── Embedding & RAG Settings ───────────────────────────────────
