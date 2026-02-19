@@ -664,8 +664,9 @@ def create_app():
 
 
 # ─── Launch ─────────────────────────────────────────────────────
-# Must be at module level (not inside __main__) so HF Spaces can serve the app.
 
 app = create_app()
-app.launch(server_name="0.0.0.0", share=False)
+
+if __name__ == "__main__":
+    app.launch(server_name="0.0.0.0", share=False)
 
