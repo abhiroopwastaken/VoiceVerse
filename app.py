@@ -173,8 +173,9 @@ def generate_content(style, custom_focus, rate_value, pitch_value):
     script_display = _format_script_display(script, style)
 
     # ── 4. Synthesize audio ──
-    rate_str = f"+{rate_value}%" if rate_value >= 0 else f"{rate_value}%"
-    pitch_str = f"+{pitch_value}Hz" if pitch_value >= 0 else f"{pitch_value}Hz"
+    # Standardize rate/pitch format for edge-tts compatibility
+    rate_str = f"{rate_value:+d}%" if rate_value != 0 else "+0%"
+    pitch_str = f"{pitch_value:+d}Hz" if pitch_value != 0 else "+0Hz"
 
     segment_paths = generate_audio(script, rate=rate_str, pitch=pitch_str)
 

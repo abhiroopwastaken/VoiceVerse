@@ -22,37 +22,32 @@ SPEAKER_VOICE_MAPPING = {
     "STORYTELLER": "Storyteller (Male)",
     "DEBATER_1":   "Debater 1 (Male)",
     "DEBATER_2":   "Debater 2 (Female)",
+    "STORY":       "Storyteller (Male)",
+    "AUTHOR":      "Narrator (British)",
 }
 
 
 def _clean_text_for_tts(text: str) -> str:
     """
     Strip markdown and special characters that TTS would read verbatim.
-    Removes: **bold**, *italic*, # headers, `code`, brackets, JSON artifacts, etc.
     """
+    if not text: return ""
     # Remove markdown bold/italic
     text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)
     text = re.sub(r'_{1,2}(.*?)_{1,2}', r'\1', text)
-
     # Remove markdown headers
     text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
-
     # Remove inline code and code blocks
     text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
-
     # Remove markdown links [text](url) → text
     text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
-
     # Remove leftover brackets and JSON-like artifacts
     text = re.sub(r'[\[\]{}"\\]', '', text)
-
     # Remove bullet points and numbered lists
     text = re.sub(r'^\s*[-•*]\s+', '', text, flags=re.MULTILINE)
     text = re.sub(r'^\s*\d+[\.\)]\s+', '', text, flags=re.MULTILINE)
-
     # Collapse whitespace
     text = re.sub(r'\s+', ' ', text).strip()
-
     return text
 
 
@@ -63,21 +58,37 @@ async def _synthesize_segment(
     rate: str = "+0%",
     pitch: str = "+0Hz",
 ) -> str:
-    """Synthesize a single text segment with edge-tts."""
+    """Synthesize a single text segment with edge-tts and fallbacks."""
     import edge_tts
 
     clean = _clean_text_for_tts(text)
-    if not clean:
+    if not clean or len(clean) < 2:
         return None
 
-    communicate = edge_tts.Communicate(
-        text=clean,
-        voice=voice,
-        rate=rate,
-        pitch=pitch,
-    )
-    await communicate.save(output_path)
-    return output_path
+    # Try synthesis with primary voice, fallback to a standard one if it fails
+    voices_to_try = [voice, "en-US-GuyNeural", "en-US-JennyNeural"]
+    last_err = None
+
+    for v in voices_to_try:
+        try:
+            communicate = edge_tts.Communicate(
+                text=clean,
+                voice=v,
+                rate=rate,
+                pitch=pitch,
+            )
+            await communicate.save(output_path)
+            
+            if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
+                return output_path
+        except Exception as e:
+            last_err = e
+            print(f"[VoiceGen] Synthesis failed for voice {v}: {e}")
+            continue
+            
+    if last_err:
+        raise last_err
+    return None
 
 
 async def _generate_all_segments(
