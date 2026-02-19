@@ -10,7 +10,7 @@ pydub
 PyMuPDF
 python-docx
 chardet
-numpy
+numpy<2
 groq
 python-dotenv
 soundfile
