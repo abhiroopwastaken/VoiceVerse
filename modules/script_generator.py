@@ -42,12 +42,20 @@ def generate_script(
         print(f"Script LLM API error: {repr(e)}")
         return [("System", f"API Error: {str(e)}")]
 
+    print(f"DEBUG: LLM Response for {style}:\n{raw_response[:500]}...")
     parsed = _parse_script(raw_response, style)
 
     if not parsed:
+        print(f"ERROR: Failed to parse script for style: {style}")
         return [("System", "Error: LLM output could not be parsed into valid JSON/Script.")]
 
-    return parsed
+    # Normalize speakers to uppercase/no spaces
+    normalized = []
+    for speaker, text in parsed:
+        s = speaker.strip().upper().replace(" ", "_")
+        normalized.append((s, text))
+
+    return normalized
 
 
 # ─── Groq Client ────────────────────────────────────────────────────────────
@@ -142,15 +150,9 @@ def _parse_script(raw_text: str, style: str) -> List[Tuple[str, str]]:
     lines = raw_text.strip().split('\n')
     parsed = []
 
-    speaker_patterns = {
-        "podcast":      r'^(HOST_A|HOST_B)\s*:\s*(.+)',
-        "narration":    r'^(NARRATOR)\s*:\s*(.+)',
-        "debate":       r'^(DEBATER_1|DEBATER_2)\s*:\s*(.+)',
-        "lecture":      r'^(PROFESSOR)\s*:\s*(.+)',
-        "storytelling": r'^(STORYTELLER)\s*:\s*(.+)',
-    }
-
-    pattern = speaker_patterns.get(style.lower(), r'^([A-Z_]+\d?)\s*:\s*(.+)')
+    # More robust pattern: starts with text, ends with colon, then dialogue
+    # e.g., "STORYTELLER: Once upon a time..." or "Host A: Hello"
+    pattern = r'^([A-Z_a-z0-9 ]+)\s*[:：]\s*(.+)'
 
     current_speaker = None
     current_text = ""
@@ -160,13 +162,16 @@ def _parse_script(raw_text: str, style: str) -> List[Tuple[str, str]]:
         if not line:
             continue
 
+        # Look for [speaker]: [text]
         match = re.match(pattern, line)
         if match:
             if current_speaker and current_text:
                 parsed.append((current_speaker, current_text.strip()))
-            current_speaker = match.group(1)
-            current_text = match.group(2)
+            current_speaker = match.group(1).strip()
+            current_text = match.group(2).strip()
         elif current_speaker:
+            # Check if this line is just a new speaker with no colon (unlikely but possible)
+            # or if it's a continuation of the previous speaker's text
             current_text += " " + line
 
     if current_speaker and current_text:

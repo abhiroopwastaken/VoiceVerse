@@ -97,16 +97,40 @@ async def _generate_all_segments(
     output_paths = []
 
     for i, (speaker, text) in enumerate(script):
-        voice_name = SPEAKER_VOICE_MAPPING.get(speaker, "Narrator (British)")
-        if custom_voices and speaker in custom_voices:
-            voice_name = custom_voices[speaker]
+        # Normalize speaker for lookup
+        lookup_speaker = speaker.strip().upper().replace(" ", "_")
+        voice_name = SPEAKER_VOICE_MAPPING.get(lookup_speaker, "Narrator (British)")
+        
+        if custom_voices and lookup_speaker in custom_voices:
+            voice_name = custom_voices[lookup_speaker]
+        
         voice_id = VOICE_MAP.get(voice_name, "en-US-GuyNeural")
 
-        out = os.path.join(temp_dir, f"segment_{i:03d}.mp3")
-        output_paths.append(out)
-        tasks.append(_synthesize_segment(text, voice_id, out, rate, pitch))
+        # Split very long texts into smaller chunks (edge-tts limit ~4096 chars)
+        # We split by sentences to keep it natural
+        if len(text) > 3500:
+            print(f"[VoiceGen] Segment {i} is too long ({len(text)} chars). Chunking...")
+            sentences = re.split(r'(?<=[.!?])\s+', text)
+            chunks = []
+            current_chunk = ""
+            for s in sentences:
+                if len(current_chunk) + len(s) < 3500:
+                    current_chunk += " " + s
+                else:
+                    if current_chunk: chunks.append(current_chunk.strip())
+                    current_chunk = s
+            if current_chunk: chunks.append(current_chunk.strip())
+            
+            for j, chunk_text in enumerate(chunks):
+                out = os.path.join(temp_dir, f"segment_{i:03d}_{j:02d}.mp3")
+                output_paths.append(out)
+                tasks.append(_synthesize_segment(chunk_text, voice_id, out, rate, pitch))
+        else:
+            out = os.path.join(temp_dir, f"segment_{i:03d}.mp3")
+            output_paths.append(out)
+            tasks.append(_synthesize_segment(text, voice_id, out, rate, pitch))
 
-    print(f"[VoiceGen] Generating {len(tasks)} segments in parallel...")
+    print(f"[VoiceGen] Generating {len(tasks)} tasks in parallel...")
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     valid_paths = []
