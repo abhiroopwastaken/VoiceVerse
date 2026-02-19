@@ -7,6 +7,9 @@ podcasts, narrations, debates, lectures, and storytelling.
 Built with Gradio, sentence-transformers, FAISS, edge-tts.
 """
 
+import os
+import sys
+import tempfile
 import gradio as gr
 import gradio_client
 import huggingface_hub
