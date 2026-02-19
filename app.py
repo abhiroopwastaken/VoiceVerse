@@ -684,10 +684,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.launch(
-        server_name="0.0.0.0", 
-        server_port=7860, 
-        ssr_mode=False, 
-        show_api=False
-    )
+    app.launch()
 
