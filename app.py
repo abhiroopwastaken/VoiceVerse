@@ -459,7 +459,7 @@ def create_app():
         theme=gr.themes.Base(
             primary_hue="indigo",
             neutral_hue="slate",
-            font=("Inter", "sans-serif")
+            font=[gr.themes.GoogleFont("Inter"), "sans-serif"]
         )
     ) as app:
 
