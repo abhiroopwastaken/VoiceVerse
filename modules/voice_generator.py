@@ -2,13 +2,16 @@
 Voice Generator Module
 ======================
 Multi-voice TTS using edge-tts with speaker mapping and tone control.
+Generates one audio file per script segment, then merges them.
 """
 
 import asyncio
 import tempfile
 import os
+import re
 from typing import List, Tuple, Optional
 from config import VOICE_MAP, DEFAULT_VOICES, SPEECH_RATE, SPEECH_PITCH
+from modules.audio_utils import merge_audio_segments
 
 
 # Speaker label → voice name mapping per style
@@ -23,6 +26,37 @@ SPEAKER_VOICE_MAPPING = {
 }
 
 
+def _clean_text_for_tts(text: str) -> str:
+    """
+    Strip markdown and special characters that TTS would read verbatim.
+    Removes: **bold**, *italic*, # headers, `code`, brackets, JSON artifacts, etc.
+    """
+    # Remove markdown bold/italic
+    text = re.sub(r'\*{1,3}(.*?)\*{1,3}', r'\1', text)
+    text = re.sub(r'_{1,2}(.*?)_{1,2}', r'\1', text)
+
+    # Remove markdown headers
+    text = re.sub(r'^#+\s*', '', text, flags=re.MULTILINE)
+
+    # Remove inline code and code blocks
+    text = re.sub(r'`{1,3}.*?`{1,3}', '', text, flags=re.DOTALL)
+
+    # Remove markdown links [text](url) → text
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+
+    # Remove leftover brackets and JSON-like artifacts
+    text = re.sub(r'[\[\]{}"\\]', '', text)
+
+    # Remove bullet points and numbered lists
+    text = re.sub(r'^\s*[-•*]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\s*\d+[\.\)]\s+', '', text, flags=re.MULTILINE)
+
+    # Collapse whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
 async def _synthesize_segment(
     text: str,
     voice: str,
@@ -32,9 +66,13 @@ async def _synthesize_segment(
 ) -> str:
     """Synthesize a single text segment with edge-tts."""
     import edge_tts
-    
+
+    clean = _clean_text_for_tts(text)
+    if not clean:
+        return None
+
     communicate = edge_tts.Communicate(
-        text=text,
+        text=clean,
         voice=voice,
         rate=rate,
         pitch=pitch,
@@ -50,45 +88,36 @@ async def _generate_all_segments(
     custom_voices: Optional[dict] = None,
 ) -> List[str]:
     """
-    Generate audio for all script segments.
-    
-    Args:
-        script: List of (speaker_label, text) tuples
-        rate: Speech rate adjustment (e.g., "+10%", "-5%")
-        pitch: Pitch adjustment (e.g., "+5Hz", "-3Hz")
-        custom_voices: Optional override for speaker→voice mapping
-    
-    Returns:
-        List of paths to individual audio segment files
+    Generate one audio file per script segment using edge-tts.
+    Each segment uses the correct voice for its speaker.
+    All segments run in parallel.
     """
-    segment_paths = []
     temp_dir = tempfile.mkdtemp(prefix="voiceverse_")
-    
+    tasks = []
+    output_paths = []
+
     for i, (speaker, text) in enumerate(script):
-        # Resolve voice ID
         voice_name = SPEAKER_VOICE_MAPPING.get(speaker, "Narrator (British)")
-        
         if custom_voices and speaker in custom_voices:
             voice_name = custom_voices[speaker]
-        
         voice_id = VOICE_MAP.get(voice_name, "en-US-GuyNeural")
-        
-        # Generate segment
-        seg_path = os.path.join(temp_dir, f"segment_{i:03d}.mp3")
-        
-        try:
-            await _synthesize_segment(text, voice_id, seg_path, rate, pitch)
-            segment_paths.append(seg_path)
-        except Exception as e:
-            print(f"Warning: Failed to synthesize segment {i}: {e}")
-            # Try with fallback voice
-            try:
-                await _synthesize_segment(text, "en-US-GuyNeural", seg_path, rate, pitch)
-                segment_paths.append(seg_path)
-            except Exception as e2:
-                print(f"Error: Fallback also failed for segment {i}: {e2}")
-    
-    return segment_paths
+
+        out = os.path.join(temp_dir, f"segment_{i:03d}.mp3")
+        output_paths.append(out)
+        tasks.append(_synthesize_segment(text, voice_id, out, rate, pitch))
+
+    print(f"[VoiceGen] Generating {len(tasks)} segments in parallel...")
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    valid_paths = []
+    for path, result in zip(output_paths, results):
+        if isinstance(result, Exception):
+            print(f"[VoiceGen] Segment failed: {result}")
+        elif result and os.path.exists(path) and os.path.getsize(path) > 0:
+            valid_paths.append(path)
+
+    print(f"[VoiceGen] {len(valid_paths)}/{len(tasks)} segments OK.")
+    return valid_paths
 
 
 def generate_audio(
@@ -96,12 +125,9 @@ def generate_audio(
     rate: str = "+0%",
     pitch: str = "+0Hz",
     custom_voices: Optional[dict] = None,
-) -> List[str]:
+) -> str:
     """
-    Synchronous wrapper for async audio generation.
-    
-    Returns:
-        List of audio segment file paths.
+    Generate audio for the full script and return path to merged MP3.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -112,15 +138,21 @@ def generate_audio(
                     asyncio.run,
                     _generate_all_segments(script, rate, pitch, custom_voices)
                 )
-                return future.result()
+                segment_paths = future.result()
         else:
-            return loop.run_until_complete(
+            segment_paths = loop.run_until_complete(
                 _generate_all_segments(script, rate, pitch, custom_voices)
             )
     except RuntimeError:
-        return asyncio.run(
+        segment_paths = asyncio.run(
             _generate_all_segments(script, rate, pitch, custom_voices)
         )
+
+    if not segment_paths:
+        raise RuntimeError("No audio segments were generated successfully.")
+
+    final_path = merge_audio_segments(segment_paths)
+    return final_path
 
 
 def get_available_voices() -> List[str]:

@@ -82,7 +82,12 @@ def merge_audio_segments(
     if output_path is None:
         output_path = tempfile.mktemp(suffix=f".{AUDIO_FORMAT}", prefix="voiceverse_final_")
     
-    # Try pydub first (if ffmpeg is available)
+    # Optimization: If only one segment, just copy it
+    if len(segment_paths) == 1:
+        import shutil
+        if os.path.exists(segment_paths[0]):
+            shutil.copy(segment_paths[0], output_path)
+            return output_path
     try:
         return _merge_with_pydub(segment_paths, pause_ms, output_path)
     except Exception as pydub_err:

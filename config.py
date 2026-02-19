@@ -5,18 +5,34 @@ Central configuration for all modules.
 """
 
 import os
+from dotenv import load_dotenv
 
-# ─── LLM Settings ───────────────────────────────────────────────
+load_dotenv()
+
+# ─── LLM Settings (Groq API) ────────────────────────────────────
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-LLM_MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
-LLM_MAX_NEW_TOKENS = 2048
-LLM_TEMPERATURE = 0.7
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+
+# Groq Model — handles both script generation and summarization
+# Using llama-3.1-8b-instant: fast, free, high quality
+GROQ_MODEL_ID = "llama-3.1-8b-instant"
+SCRIPT_MAX_TOKENS = 3000
+SCRIPT_TEMPERATURE = 0.5
+SUMMARIZATION_MAX_TOKENS = 512
+SUMMARIZATION_TEMPERATURE = 0.3
 
 # ─── Embedding & RAG Settings ───────────────────────────────────
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-CHUNK_SIZE = 500          # characters per chunk
-CHUNK_OVERLAP = 50        # overlap between chunks
-TOP_K_RETRIEVAL = 5       # number of chunks to retrieve
+# Use local BGE-Small (CPU optimized)
+EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5" 
+
+# Reranker Model (via HF API)
+RERANKER_MODEL = "BAAI/bge-reranker-base"
+RERANKER_TOP_K = 8        # Top chunks to keep after reranking
+
+CHUNK_SIZE = 1000          # Larger chunks = more coherent context
+CHUNK_OVERLAP = 0          # Semantic splits handle context
+SEMANTIC_CHUNK_THRESHOLD = 0.45  
+TOP_K_RETRIEVAL = 15       # Initial retrieval (passed to reranker)
 
 # ─── Voice Mappings (edge-tts voice IDs) ────────────────────────
 VOICE_MAP = {

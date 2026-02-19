@@ -1,133 +1,133 @@
 """
 Prompt Templates for Script Generation
 =======================================
-Structured prompts for each content style.
+All templates enforce source-grounded output — the LLM must use ONLY
+specific facts, names, quotes, and examples from the provided source material.
 """
 
-SYSTEM_PROMPT = """You are a professional script writer for audio content. 
-You create engaging, well-structured scripts that sound natural when read aloud.
-Your scripts must be based ONLY on the provided source material - do not invent facts."""
+SYSTEM_PROMPT = """You are a professional script writer for audio content.
+Your scripts must be DEEPLY GROUNDED in the provided source material.
+
+CRITICAL RULES:
+1. Use SPECIFIC details from the source: exact names, quotes, experiments, statistics, examples.
+2. Do NOT invent facts, add generic knowledge, or pad with vague statements.
+3. Every claim must be traceable to the source material provided.
+4. Produce engaging content that accurately reflects the source.
+5. OUTPUT FORMAT: Respond with ONLY a valid JSON array. No markdown, no explanation.
+   Format: [{"speaker": "SPEAKER_NAME", "text": "dialogue text"}, ...]"""
 
 
-PODCAST_TEMPLATE = """Write a podcast script for TWO hosts discussing the following material.
-The podcast should feel like a natural, engaging conversation between two knowledgeable hosts.
+PODCAST_TEMPLATE = """Write a podcast script based EXCLUSIVELY on the source material below.
 
-FORMAT RULES (FOLLOW EXACTLY):
-- Use EXACTLY this format for each line: SPEAKER: dialogue text
-- Use "HOST_A:" and "HOST_B:" as speaker labels
-- Start with HOST_A introducing the topic
-- Include natural conversational elements (reactions, questions, agreements)
-- End with both hosts wrapping up with key takeaways
-- Write 15-25 dialogue exchanges total
-- Each line should be 1-3 sentences (suitable for spoken delivery)
-
+SPEAKERS: HOST_A and HOST_B
 STRUCTURE:
-1. INTRO (2-3 exchanges): Greet listeners, introduce today's topic
-2. BODY (10-18 exchanges): Deep dive into the key points from the material
-3. CONCLUSION (2-3 exchanges): Summarize takeaways, thank listeners
+1. INTRO (2 exchanges): Introduce the specific topic from the document
+2. BODY (12-16 exchanges): Discuss specific concepts, experiments, names, and examples from the source
+3. CONCLUSION (2 exchanges): Key takeaways directly from the material
 
-SOURCE MATERIAL:
+QUALITY RULES:
+- MUST reference specific names (e.g. researchers, authors, concepts) from the source
+- MUST discuss specific experiments, case studies or findings mentioned in the source
+- MUST use language and terminology from the source material
+- Do NOT use generic filler like "That's a great point" without substance
+- Each HOST turn must contain a specific insight from the source, not vague commentary
+- Total: 15-20 exchanges
+
+SOURCE MATERIAL (use ONLY this):
 {context}
 
 {custom_focus}
 
-Write the podcast script now:"""
+Respond with ONLY the JSON array:"""
 
 
-NARRATION_TEMPLATE = """Write a narration script for a single narrator presenting the following material.
-The narration should be engaging, dramatic, and educational - like a documentary voiceover.
+NARRATION_TEMPLATE = """Write a narration script based EXCLUSIVELY on the source material below.
 
-FORMAT RULES (FOLLOW EXACTLY):
-- Use EXACTLY this format for each line: NARRATOR: narration text
-- Use "NARRATOR:" as the speaker label
-- Each paragraph should be 2-4 sentences
-- Write 10-15 paragraphs total
-- Use vivid language and rhetorical devices
-
+SPEAKER: NARRATOR only
 STRUCTURE:
-1. OPENING HOOK (1-2 paragraphs): Start with an attention-grabbing statement
-2. BODY (7-11 paragraphs): Present the key information in a compelling narrative
-3. CLOSING (1-2 paragraphs): End with a thought-provoking conclusion
+1. OPENING HOOK (1-2 paragraphs): Start with a compelling specific fact or quote from the source
+2. BODY (8-12 paragraphs): Present specific concepts, names, experiments and findings from the source
+3. CLOSING (1-2 paragraphs): End with a key insight or conclusion from the source
 
-SOURCE MATERIAL:
+QUALITY RULES:
+- Open with a specific compelling detail, quote, or fact from the source
+- Reference specific researchers, thinkers, experiments, or studies mentioned in the source
+- Do NOT use generic phrases — every sentence must reflect the actual content
+- Use vivid, documentary-style language to bring the source material to life
+- Total: 10-14 paragraphs
+
+SOURCE MATERIAL (use ONLY this):
 {context}
 
 {custom_focus}
 
-Write the narration script now:"""
+Respond with ONLY the JSON array:"""
 
 
-DEBATE_TEMPLATE = """Write a debate script between TWO debaters discussing the following material.
-They should present different perspectives and arguments, but remain respectful.
+DEBATE_TEMPLATE = """Write a debate script based EXCLUSIVELY on the source material below.
 
-FORMAT RULES (FOLLOW EXACTLY):
-- Use EXACTLY this format for each line: SPEAKER: dialogue text
-- Use "DEBATER_1:" and "DEBATER_2:" as speaker labels
-- Start with DEBATER_1 presenting an opening argument
-- Include counterarguments, rebuttals, and evidence from the source
-- End with both debaters giving closing statements
-- Write 15-25 exchanges total
-- Each turn should be 2-4 sentences
-
+SPEAKERS: DEBATER_1 and DEBATER_2
 STRUCTURE:
-1. OPENING STATEMENTS (2-3 exchanges each)
-2. MAIN DEBATE (10-15 exchanges): Arguments and counterarguments
-3. CLOSING STATEMENTS (1-2 exchanges each)
+1. OPENING STATEMENTS (2-3 each): Each debater presents a position grounded in the source
+2. MAIN DEBATE (12-16 exchanges): Arguments, counterarguments using specific source evidence
+3. CLOSING STATEMENTS (1-2 each): Final position using source-based conclusions
 
-SOURCE MATERIAL:
+QUALITY RULES:
+- Both positions must be derived from the source material itself
+- Each argument must cite specific evidence, examples, or ideas from the source
+- Counterarguments must engage with the actual content, not generic debate tactics
+- Total: 16-22 exchanges
+
+SOURCE MATERIAL (use ONLY this):
 {context}
 
 {custom_focus}
 
-Write the debate script now:"""
+Respond with ONLY the JSON array:"""
 
 
-LECTURE_TEMPLATE = """Write a lecture script for a professor explaining the following material to students.
-The lecture should be clear, educational, and engaging.
+LECTURE_TEMPLATE = """Write a lecture script based EXCLUSIVELY on the source material below.
 
-FORMAT RULES (FOLLOW EXACTLY):
-- Use EXACTLY this format for each line: PROFESSOR: lecture text
-- Use "PROFESSOR:" as the speaker label
-- Each section should be 2-4 sentences
-- Include examples and analogies to explain concepts
-- Write 12-18 paragraphs total
-- Use a warm, encouraging teaching tone
-
+SPEAKER: PROFESSOR only
 STRUCTURE:
-1. INTRODUCTION (2-3 paragraphs): Welcome students, introduce the topic, explain why it matters
-2. MAIN CONTENT (8-12 paragraphs): Teach the key concepts with examples
-3. SUMMARY (2-3 paragraphs): Recap key points, preview what's next
+1. INTRODUCTION (2-3 paragraphs): Introduce the topic using the opening ideas from the source
+2. MAIN CONTENT (9-13 paragraphs): Teach each key concept, using specific examples and details from the source
+3. SUMMARY (1-2 paragraphs): Summarise the core insights as stated in the source
 
-SOURCE MATERIAL:
+QUALITY RULES:
+- Every concept taught must come directly from the source material
+- Include specific names, experiments, studies, and findings from the source
+- Use clear educational language but grounded in the actual source content
+- Total: 12-18 paragraphs
+
+SOURCE MATERIAL (use ONLY this):
 {context}
 
 {custom_focus}
 
-Write the lecture script now:"""
+Respond with ONLY the JSON array:"""
 
 
-STORYTELLING_TEMPLATE = """Write a storytelling script that weaves the following material into an engaging narrative.
-Think of it as telling a fascinating story around a campfire.
+STORYTELLING_TEMPLATE = """Write a storytelling script based EXCLUSIVELY on the source material below.
 
-FORMAT RULES (FOLLOW EXACTLY):
-- Use EXACTLY this format for each line: STORYTELLER: narrative text
-- Use "STORYTELLER:" as the speaker label  
-- Each section should be 2-4 sentences
-- Use descriptive language, suspense, and emotional cues
-- Write 12-18 paragraphs total
-- Make it captivating and vivid
-
+SPEAKER: STORYTELLER only
 STRUCTURE:
-1. THE HOOK (2-3 paragraphs): Set the scene, create intrigue
-2. THE JOURNEY (8-12 paragraphs): Unfold the story based on the material
-3. THE REVELATION (2-3 paragraphs): Deliver the key insight, leave the listener inspired
+1. THE HOOK (2 paragraphs): Open with a specific intriguing detail or scenario from the source
+2. THE JOURNEY (9-13 paragraphs): Unfold the story using actual events, people, and ideas from the source
+3. THE REVELATION (1-2 paragraphs): Deliver the key insight exactly as concluded in the source
 
-SOURCE MATERIAL:
+QUALITY RULES:
+- The story MUST be drawn from the actual content of the source, not invented narrative
+- Weave in specific researchers, experiments, discoveries, or examples from the source
+- Make it compelling and vivid using the real details present in the material
+- Total: 12-17 paragraphs
+
+SOURCE MATERIAL (use ONLY this):
 {context}
 
 {custom_focus}
 
-Write the storytelling script now:"""
+Respond with ONLY the JSON array:"""
 
 
 def get_template(style: str) -> str:
@@ -148,6 +148,6 @@ def build_prompt(context: str, style: str, custom_focus: str = "") -> str:
     
     focus_instruction = ""
     if custom_focus:
-        focus_instruction = f"SPECIAL FOCUS: Pay particular attention to: {custom_focus}"
+        focus_instruction = f"SPECIAL FOCUS: Emphasise content related to: {custom_focus}"
     
     return template.format(context=context, custom_focus=focus_instruction)

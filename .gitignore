@@ -1,7 +1,25 @@
+# Virtual environment
 env/
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+
+# Secrets
 .env
+
+# macOS
 .DS_Store
+
+# IDE / tooling
 .gemini/
 .agent/
+
+# Temp / generated audio files
+/tmp/voiceverse_*
+*.mp3
+*.wav
+
+# Test outputs
+test_output*

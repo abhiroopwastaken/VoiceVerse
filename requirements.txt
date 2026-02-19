@@ -8,3 +8,7 @@ python-docx
 chardet
 huggingface-hub>=0.19.3,<0.25.0
 numpy
+groq
+gradio_client
+python-dotenv
+soundfile
