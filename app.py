@@ -12,25 +12,41 @@ import sys
 import tempfile
 import gradio as gr
 from gradio.blocks import Blocks
-import gradio_client
+import gradio_client.utils as client_utils # Changed from gradio_client to gradio_client.utils
 import huggingface_hub
 
-# --- SAFETY PATCH: Bypasses the crashing API schema builder ---
-# This addresses the 'bool is not iterable' TypeError in Gradio 4.36+ 
-# when generating internal API documentation.
+# --- BETTER SAFETY PATCH: Fixes the Gradio Client utility bug ---
+# This fixes the 'bool is not iterable' TypeError in gradio_client.utils.get_type
+# by properly handling boolean schemas in the OpenAPI documentation generator.
+if hasattr(client_utils, "get_type"):
+    original_get_type = client_utils.get_type
+    def patched_get_type(schema):
+        if isinstance(schema, bool):
+            return "Any"
+        return original_get_type(schema)
+    client_utils.get_type = patched_get_type
+
+# Fallback: Still patch get_api_info but return the original if it works now
 original_get_api_info = Blocks.get_api_info
 def patched_get_api_info(self):
     try:
         return original_get_api_info(self)
     except Exception as e:
-        print(f"DEBUG: Bypassed Gradio API Schema Bug: {e}")
+        print(f"DEBUG: Still crashing after patch, returning empty info: {e}")
         return {}
 Blocks.get_api_info = patched_get_api_info
 # -----------------------------------------------------------
 
+import gradio_client
 print("Gradio version:", gr.__version__)
 print("Gradio Client version:", gradio_client.__version__)
 print("HF Hub version:", huggingface_hub.__version__)
+
+# Check API Keys
+GROQ_KEY = os.environ.get("GROQ_API_KEY")
+HF_KEY = os.environ.get("HF_TOKEN")
+print(f"GROQ_API_KEY set: {'YES' if GROQ_KEY else 'NO'} ({GROQ_KEY[:4]}...{GROQ_KEY[-4:]} if GROQ_KEY else 'N/A')")
+print(f"HF_TOKEN set: {'YES' if HF_KEY else 'NO'} ({HF_KEY[:4]}...{HF_KEY[-4:]} if HF_KEY else 'N/A')")
 
 from typing import List, Tuple, Optional
 
