@@ -7,10 +7,13 @@ podcasts, narrations, debates, lectures, and storytelling.
 Built with Gradio, sentence-transformers, FAISS, edge-tts.
 """
 
-import os
-import sys
-import tempfile
 import gradio as gr
+import gradio_client
+import huggingface_hub
+print("Gradio version:", gr.__version__)
+print("Gradio Client version:", gradio_client.__version__)
+print("HF Hub version:", huggingface_hub.__version__)
+
 from typing import List, Tuple, Optional
 
 # Ensure project root is in path
@@ -69,19 +72,19 @@ def process_documents(files, text_input):
         print(f"DEBUG: Ingestion complete. {num_chunks} chunks created.")
 
         # Build summary
-        summary_lines = ["### 📊 Document Processing Summary\n"]
+        summary_lines = ["--- Document Processing Summary ---\n"]
         total_words = 0
         for meta in metadata_list:
             if meta.get("type") == "ERROR":
-                summary_lines.append(f"- ❌ **{meta['filename']}**: {meta.get('error', 'Unknown error')}")
+                summary_lines.append(f"- [ERROR] {meta['filename']}: {meta.get('error', 'Unknown error')}")
             else:
                 wc = meta.get('word_count', 0)
                 total_words += wc
                 summary_lines.append(
-                    f"- ✅ **{meta['filename']}** ({meta['type']}) — {wc:,} words"
+                    f"- [OK] {meta['filename']} ({meta['type']}) -- {wc:,} words"
                 )
 
-        summary_lines.append(f"\n**Total**: {total_words:,} words → **{num_chunks} chunks** indexed")
+        summary_lines.append(f"\nTotal: {total_words:,} words -> {num_chunks} chunks indexed")
         summary = "\n".join(summary_lines)
 
         print("DEBUG: Generating content summary...")
@@ -89,7 +92,7 @@ def process_documents(files, text_input):
         content_summary = generate_summary(combined_text)
         print("DEBUG: Content summary generated.")
 
-        return summary, content_summary
+        return str(summary), str(content_summary)
 
     except Exception as e:
         import traceback
@@ -144,33 +147,22 @@ def generate_content(style, custom_focus, rate_value, pitch_value):
 
     duration = get_audio_duration(final_audio)
 
-    status = f"### ✅ Generation Complete!\n\n"
-    status += f"- **Style**: {style}\n"
-    status += f"- **Segments**: {len(script)} speaker turns\n"
-    status += f"- **Duration**: {duration:.1f} seconds\n"
-    status += f"- **Speech Rate**: {rate_str}\n"
+    status = f"--- Generation Complete! ---\n\n"
+    status += f"- Style: {style}\n"
+    status += f"- Segments: {len(script)} speaker turns\n"
+    status += f"- Duration: {duration:.1f} seconds\n"
+    status += f"- Speech Rate: {rate_str}\n"
 
-    return final_audio, script_display, status
+    return str(final_audio), str(script_display), str(status)
 
 
 def _format_script_display(script: List[Tuple[str, str]], style: str) -> str:
     """Format the script for display in the UI."""
-    lines = [f"## 📝 Generated {style} Script\n"]
-
-    speaker_emoji = {
-        "HOST_A": "🎙️",
-        "HOST_B": "🎧",
-        "NARRATOR": "📖",
-        "PROFESSOR": "👩‍🏫",
-        "STORYTELLER": "📚",
-        "DEBATER_1": "💬",
-        "DEBATER_2": "💭",
-    }
+    lines = [f"Generated {style} Script\n"]
 
     for speaker, text in script:
-        emoji = speaker_emoji.get(speaker, "🗣️")
         display_name = speaker.replace("_", " ").title()
-        lines.append(f"**{emoji} {display_name}:**\n{text}\n")
+        lines.append(f"{display_name}:\n{text}\n")
 
     return "\n".join(lines)
 
@@ -362,6 +354,7 @@ h1, h2, h3, h4, h5, h6 {
 .gr-input:focus, textarea:focus {
     border-color: #6366f1 !important;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
+    outline: none !important;
 }
 label {
     color: #94a3b8 !important;
@@ -377,6 +370,7 @@ label {
     border-radius: 12px !important;
     transition: all 0.2s ease !important;
     box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3) !important;
+    cursor: pointer !important;
 }
 .primary-btn:hover {
     transform: translateY(-2px) !important;
@@ -540,10 +534,10 @@ def create_app():
                         elem_classes=["primary-btn"],
                     )
 
-                doc_summary = gr.Markdown(value="*Upload documents or enter text to see processing summary*")
+                doc_summary = gr.Textbox(label="Processing Summary", interactive=False, lines=4)
 
-                with gr.Accordion("📃 Document Summary", open=True):
-                    doc_preview = gr.Markdown(value="*AI-generated summary will appear here.*")
+                with gr.Accordion("📃 Document Preview", open=True):
+                    doc_preview = gr.Textbox(label="AI Summary", interactive=False, lines=8)
 
             # ═══════════════════════════════════════════
             # STEP 2: Configure & Generate
@@ -610,7 +604,7 @@ def create_app():
                 </div>
                 """)
 
-                gen_status = gr.Markdown(value="*Generate audio to see results here*")
+                gen_status = gr.Textbox(label="Generation Status", interactive=False, lines=4)
 
                 audio_output = gr.Audio(
                     label="Generated Audio",
@@ -619,7 +613,7 @@ def create_app():
                 )
 
                 with gr.Accordion("📝 Generated Script", open=False):
-                    script_output = gr.Markdown(value="*Script will appear here after generation*")
+                    script_output = gr.Textbox(label="Script Content", interactive=False, lines=20)
 
             # ═══════════════════════════════════════════
             # HOW IT WORKS
@@ -658,7 +652,7 @@ def create_app():
             <div class="app-footer">
                 <p>© 2026 VoiceVerse. Built for the AI Challenge.</p>
                 <p style="font-size: 0.75rem; opacity: 0.7;">
-                    Models: all-MiniLM-L6-v2 (embeddings) · Qwen2.5-72B-Instruct (scripts) · Microsoft Edge TTS (voice)
+                    Models: all-MiniLM-L6-v2 (embeddings) · llama-3.1-8b-instant (scripts) · Microsoft Neural TTS (voice)
                 </p>
             </div>
             """)
