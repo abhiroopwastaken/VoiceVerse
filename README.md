@@ -15,6 +15,9 @@ secrets:
 
 # 🎙️ VoiceVerse — AI Document-to-Audio Application
 
+✅ **Final Stable Release**: `v1.0.0-stable`
+> *Includes hotfixes for Gradio 4.36+ schema compatibility, NumPy 1.x pinning for Faiss, and reliable HF Spaces deployment.*
+
 Transform your documents into captivating audio experiences using AI.
 
 ## Features
