@@ -172,7 +172,11 @@ def generate_content(style, custom_focus, rate_value, pitch_value):
     # ── 3. Format script for display ──
     script_display = _format_script_display(script, style)
 
-    # ── 4. Synthesize audio ──
+    # ── 4. Check for errors before synthesis ──
+    if script and script[0][0] == "System":
+        return None, str(script_display), "Error: Script generation failed."
+
+    # ── 5. Synthesize audio ──
     # Standardize rate/pitch format for edge-tts compatibility
     rate_str = f"{rate_value:+d}%" if rate_value != 0 else "+0%"
     pitch_str = f"{pitch_value:+d}Hz" if pitch_value != 0 else "+0Hz"
@@ -182,16 +186,7 @@ def generate_content(style, custom_focus, rate_value, pitch_value):
     if not segment_paths:
         raise gr.Error("Failed to generate audio. Please try again.")
 
-    # generate_audio now returns the merged final path directly
-    if isinstance(segment_paths, list):
-        # Backward compat: if a list is returned, merge it
-        output_path = tempfile.mktemp(suffix=".mp3", prefix="voiceverse_")
-        final_audio = merge_audio_segments(segment_paths, output_path=output_path)
-        cleanup_temp_files(segment_paths)
-    else:
-        # New: single merged path returned directly
-        final_audio = segment_paths
-
+    final_audio = segment_paths
     duration = get_audio_duration(final_audio)
 
     status = f"--- Generation Complete! ---\n\n"
@@ -205,8 +200,11 @@ def generate_content(style, custom_focus, rate_value, pitch_value):
 
 def _format_script_display(script: List[Tuple[str, str]], style: str) -> str:
     """Format the script for display in the UI."""
-    lines = [f"Generated {style} Script\n"]
+    # Check if this is an error message
+    if len(script) == 1 and script[0][0] == "System":
+        return f"⚠️ {script[0][1]}"
 
+    lines = [f"Generated {style} Script\n"]
     for speaker, text in script:
         display_name = speaker.replace("_", " ").title()
         lines.append(f"{display_name}:\n{text}\n")
