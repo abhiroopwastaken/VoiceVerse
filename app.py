@@ -507,7 +507,6 @@ def create_app():
                             file_count="multiple",
                             file_types=[".pdf", ".txt", ".docx"],
                             elem_classes=["file-upload-box"],
-                            height=200, # Reduce height
                         )
                     with gr.Column(scale=1):
                         text_input = gr.Textbox(
@@ -668,5 +667,10 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.launch(server_name="0.0.0.0", share=False, show_api=False)
+    app.launch(
+        server_name="0.0.0.0", 
+        server_port=7860, 
+        share=False, 
+        show_api=False
+    )
 
