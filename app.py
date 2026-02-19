@@ -34,52 +34,69 @@ def process_documents(files, text_input):
     """Step 1: Upload and process documents."""
     global rag_pipeline
 
-    if not files and not text_input.strip():
-        raise gr.Error("Please upload a document or enter text.")
+    try:
+        if not files and not text_input.strip():
+            raise gr.Error("Please upload a document or enter text.")
 
-    file_paths = []
-    if files:
-        for f in files:
-            if hasattr(f, 'name'):
-                file_paths.append(f.name)
-            elif isinstance(f, str):
-                file_paths.append(f)
+        print(f"DEBUG: Starting document processing. Files: {len(files) if files else 0}, Text Input: {len(text_input)} chars")
+        
+        file_paths = []
+        if files:
+            for f in files:
+                if hasattr(f, 'name'):
+                    file_paths.append(f.name)
+                elif isinstance(f, str):
+                    file_paths.append(f)
+                else:
+                    file_paths.append(str(f))
+
+        print("DEBUG: Extracting text...")
+        combined_text, metadata_list = extract_from_multiple(file_paths)
+        
+        # Append direct text input
+        if text_input.strip():
+            combined_text += "\n\n" + text_input
+            metadata_list.append({"filename": "Direct Text Input", "type": "TXT", "word_count": len(text_input.split())})
+
+        if not combined_text.strip():
+            raise gr.Error("Could not extract any text. Please check your inputs.")
+
+        print(f"DEBUG: Text extraction complete. Total words: {len(combined_text.split())}")
+        
+        print("DEBUG: Initializing RAG pipeline and ingesting text...")
+        rag_pipeline = RAGPipeline()
+        num_chunks = rag_pipeline.ingest(combined_text)
+        print(f"DEBUG: Ingestion complete. {num_chunks} chunks created.")
+
+        # Build summary
+        summary_lines = ["### 📊 Document Processing Summary\n"]
+        total_words = 0
+        for meta in metadata_list:
+            if meta.get("type") == "ERROR":
+                summary_lines.append(f"- ❌ **{meta['filename']}**: {meta.get('error', 'Unknown error')}")
             else:
-                file_paths.append(str(f))
+                wc = meta.get('word_count', 0)
+                total_words += wc
+                summary_lines.append(
+                    f"- ✅ **{meta['filename']}** ({meta['type']}) — {wc:,} words"
+                )
 
-    combined_text, metadata_list = extract_from_multiple(file_paths)
-    
-    # Append direct text input
-    if text_input.strip():
-        combined_text += "\n\n" + text_input
-        metadata_list.append({"filename": "Direct Text Input", "type": "TXT", "word_count": len(text_input.split())})
+        summary_lines.append(f"\n**Total**: {total_words:,} words → **{num_chunks} chunks** indexed")
+        summary = "\n".join(summary_lines)
 
-    if not combined_text.strip():
-        raise gr.Error("Could not extract any text. Please check your inputs.")
+        print("DEBUG: Generating content summary...")
+        # Generate Content Summary
+        content_summary = generate_summary(combined_text)
+        print("DEBUG: Content summary generated.")
 
-    rag_pipeline = RAGPipeline()
-    num_chunks = rag_pipeline.ingest(combined_text)
+        return summary, content_summary
 
-    # Build summary
-    summary_lines = ["### 📊 Document Processing Summary\n"]
-    total_words = 0
-    for meta in metadata_list:
-        if meta.get("type") == "ERROR":
-            summary_lines.append(f"- ❌ **{meta['filename']}**: {meta.get('error', 'Unknown error')}")
-        else:
-            wc = meta.get('word_count', 0)
-            total_words += wc
-            summary_lines.append(
-                f"- ✅ **{meta['filename']}** ({meta['type']}) — {wc:,} words"
-            )
-
-    summary_lines.append(f"\n**Total**: {total_words:,} words → **{num_chunks} chunks** indexed")
-    summary = "\n".join(summary_lines)
-
-    # Generate Content Summary
-    content_summary = generate_summary(combined_text)
-
-    return summary, content_summary
+    except Exception as e:
+        import traceback
+        error_msg = f"Error processing documents: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        print(traceback.format_exc())
+        raise gr.Error(error_msg)
 
 
 def generate_content(style, custom_focus, rate_value, pitch_value):

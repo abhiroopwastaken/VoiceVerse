@@ -6,7 +6,7 @@ pydub
 PyMuPDF
 python-docx
 chardet
-huggingface-hub
+huggingface-hub==0.24.3
 numpy
 groq
 python-dotenv

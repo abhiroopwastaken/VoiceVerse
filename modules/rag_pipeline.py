@@ -31,8 +31,10 @@ class RAGPipeline:
         if self._model is None:
             from sentence_transformers import SentenceTransformer
             from config import EMBEDDING_MODEL
+            print(f"DEBUG: Loading embedding model: {EMBEDDING_MODEL}...")
             # Using BGE-M3 or similar high-quality model
             self._model = SentenceTransformer(EMBEDDING_MODEL)
+            print("DEBUG: Embedding model loaded.")
         return self._model
     
     def ingest(self, text: str) -> int:
@@ -51,16 +53,20 @@ class RAGPipeline:
             raise ValueError("No text chunks could be created from the document.")
         
         # 2. Compute embeddings
+        print(f"DEBUG: Computing embeddings for {len(self.chunks)} chunks...")
         self.embeddings = self.model.encode(
             self.chunks,
             show_progress_bar=False,
             normalize_embeddings=True,
         )
+        print("DEBUG: Embeddings computed.")
         
         # 3. Build FAISS index (Inner Product for normalized vectors = cosine sim)
+        print("DEBUG: Building FAISS index...")
         dim = self.embeddings.shape[1]
         self.index = faiss.IndexFlatIP(dim)
         self.index.add(self.embeddings.astype(np.float32))
+        print("DEBUG: FAISS index built.")
         
         return len(self.chunks)
     
@@ -228,8 +234,10 @@ class RAGPipeline:
         """Lazy-load a small, fast model for semantic splitting logic."""
         if not hasattr(self, '_fast_model') or self._fast_model is None:
             from sentence_transformers import SentenceTransformer
+            print("DEBUG: Loading fast model for semantic chunking (all-MiniLM-L6-v2)...")
             # "all-MiniLM-L6-v2" is extremely fast and good enough for determining sentence similarity breaks
             self._fast_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+            print("DEBUG: Fast model loaded.")
         return self._fast_model
 
     def _chunk_text_semantic(self, text: str) -> List[str]:
