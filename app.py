@@ -667,6 +667,6 @@ def create_app():
 
 app = create_app()
 
-# if __name__ == "__main__":
-#    app.launch(server_name="0.0.0.0", share=False)
+if __name__ == "__main__":
+    app.launch(server_name="0.0.0.0", share=False, show_api=False)
 
