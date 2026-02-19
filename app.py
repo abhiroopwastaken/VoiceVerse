@@ -11,8 +11,23 @@ import os
 import sys
 import tempfile
 import gradio as gr
+from gradio.blocks import Blocks
 import gradio_client
 import huggingface_hub
+
+# --- SAFETY PATCH: Bypasses the crashing API schema builder ---
+# This addresses the 'bool is not iterable' TypeError in Gradio 4.36+ 
+# when generating internal API documentation.
+original_get_api_info = Blocks.get_api_info
+def patched_get_api_info(self):
+    try:
+        return original_get_api_info(self)
+    except Exception as e:
+        print(f"DEBUG: Bypassed Gradio API Schema Bug: {e}")
+        return {}
+Blocks.get_api_info = patched_get_api_info
+# -----------------------------------------------------------
+
 print("Gradio version:", gr.__version__)
 print("Gradio Client version:", gradio_client.__version__)
 print("HF Hub version:", huggingface_hub.__version__)
