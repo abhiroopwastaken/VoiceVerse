@@ -13,4 +13,3 @@ chardet
 numpy<2
 groq
 python-dotenv
-soundfile

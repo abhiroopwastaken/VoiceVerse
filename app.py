@@ -10,6 +10,8 @@ Built with Gradio, sentence-transformers, FAISS, edge-tts.
 import os
 import sys
 import tempfile
+from dotenv import load_dotenv
+load_dotenv()
 import gradio as gr
 from gradio.blocks import Blocks
 import gradio_client.utils as client_utils # Changed from gradio_client to gradio_client.utils
@@ -57,8 +59,12 @@ print("HF Hub version:", huggingface_hub.__version__)
 # Check API Keys
 GROQ_KEY = os.environ.get("GROQ_API_KEY")
 HF_KEY = os.environ.get("HF_TOKEN")
-print(f"GROQ_API_KEY set: {'YES' if GROQ_KEY else 'NO'} ({GROQ_KEY[:4]}...{GROQ_KEY[-4:]} if GROQ_KEY else 'N/A')")
-print(f"HF_TOKEN set: {'YES' if HF_KEY else 'NO'} ({HF_KEY[:4]}...{HF_KEY[-4:]} if HF_KEY else 'N/A')")
+
+groq_info = f" ({GROQ_KEY[:4]}...{GROQ_KEY[-4:]})" if GROQ_KEY else ""
+hf_info = f" ({HF_KEY[:4]}...{HF_KEY[-4:]})" if HF_KEY else ""
+
+print(f"GROQ_API_KEY set: {'YES' if GROQ_KEY else 'NO'}{groq_info}")
+print(f"HF_TOKEN set: {'YES' if HF_KEY else 'NO'}{hf_info}")
 
 from typing import List, Tuple, Optional
 
@@ -73,6 +79,8 @@ from modules.voice_generator import generate_audio, get_available_voices, SPEAKE
 from modules.audio_utils import merge_audio_segments, get_audio_duration, cleanup_temp_files
 
 
+
+# Existing functions...
 # ─── Global State ───────────────────────────────────────────────
 rag_pipeline = None
 
@@ -499,7 +507,23 @@ def create_app():
             primary_hue="indigo",
             neutral_hue="slate",
             font=[gr.themes.GoogleFont("Inter"), "sans-serif"]
-        )
+        ),
+        js="""
+        function() {
+            const toggleDark = () => {
+                document.documentElement.classList.add('dark');
+                document.body.classList.add('dark');
+            };
+            toggleDark();
+            
+            const observer = new MutationObserver(() => {
+                if (!document.documentElement.classList.contains('dark')) {
+                    toggleDark();
+                }
+            });
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        }
+        """
     ) as app:
 
         with gr.Column(elem_classes=["main-content"]):
@@ -583,6 +607,7 @@ def create_app():
 
                 with gr.Accordion("📃 Document Preview", open=True):
                     doc_preview = gr.Textbox(label="AI Summary", interactive=False, lines=8)
+
 
             # ═══════════════════════════════════════════
             # STEP 2: Configure & Generate

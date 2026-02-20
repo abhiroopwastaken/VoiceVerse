@@ -65,7 +65,8 @@ async def _synthesize_segment(
     if not clean or len(clean) < 2:
         return None
 
-    # Try synthesis with primary voice, fallback to a standard one if it fails
+
+    # Fallback to standard edge-tts synthesis...
     voices_to_try = [voice, "en-US-GuyNeural", "en-US-JennyNeural"]
     last_err = None
 
@@ -115,9 +116,10 @@ async def _generate_all_segments(
             voice_name = custom_voices[lookup_speaker]
         
         voice_id = VOICE_MAP.get(voice_name, "en-US-GuyNeural")
+        
+        target_voice = voice_id
 
-        # Split very long texts into smaller chunks (edge-tts limit ~4096 chars)
-        # We split by sentences to keep it natural
+        # Split very long texts into smaller chunks
         if len(text) > 3500:
             print(f"[VoiceGen] Segment {i} is too long ({len(text)} chars). Chunking...")
             sentences = re.split(r'(?<=[.!?])\s+', text)
@@ -134,11 +136,11 @@ async def _generate_all_segments(
             for j, chunk_text in enumerate(chunks):
                 out = os.path.join(temp_dir, f"segment_{i:03d}_{j:02d}.mp3")
                 output_paths.append(out)
-                tasks.append(_synthesize_segment(chunk_text, voice_id, out, rate, pitch))
+                tasks.append(_synthesize_segment(chunk_text, target_voice, out, rate, pitch))
         else:
             out = os.path.join(temp_dir, f"segment_{i:03d}.mp3")
             output_paths.append(out)
-            tasks.append(_synthesize_segment(text, voice_id, out, rate, pitch))
+            tasks.append(_synthesize_segment(text, target_voice, out, rate, pitch))
 
     print(f"[VoiceGen] Generating {len(tasks)} tasks (concurrency=5)...")
     
