@@ -542,7 +542,7 @@ def create_app():
             <div class="hero-section">
                 <h1 class="hero-title">Turn Documents into<br>Lifelike Audio</h1>
                 <p class="hero-subtitle">
-                    Upload any document and our RAG pipeline extracts key insignts, generates structured scripts, and synthesizes natural-sounding audio with emotion.
+                    Upload any document and the RAG pipeline extracts key insignts, generates structured scripts, and synthesizes natural-sounding audio with verious types of customisation.
                 </p>
             </div>
             """)
@@ -720,7 +720,7 @@ def create_app():
             # ── Footer ──
             gr.HTML("""
             <div class="app-footer">
-                <p>© 2026 VoiceVerse. Built for the AI Challenge.</p>
+                <p>© 2026 VoiceVerse. Built for the Makers Lab Assignment 2.</p>
                 <p style="font-size: 0.75rem; opacity: 0.7;">
                     Models: all-MiniLM-L6-v2 (embeddings) · llama-3.1-8b-instant (scripts) · Microsoft Neural TTS (voice)
                 </p>
